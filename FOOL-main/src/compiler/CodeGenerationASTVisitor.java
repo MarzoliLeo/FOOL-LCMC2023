@@ -358,22 +358,22 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
                 dispatchTable.add(method.offset, method.label);
             }
         }
-        String createDispatchTable = null;
+        String generationDispatchTable = null;
         for (String label : dispatchTable) {
-            createDispatchTable = nlJoin(
-                    createDispatchTable,
-                    "push " + label,
-                    "lhp",
-                    "sw",
-                    "lhp",
-                    "push 1",
-                    "add",
-                    "shp"
+            generationDispatchTable = nlJoin(
+                    generationDispatchTable, // creo sullo heap la Dispatch Table che ho costruito, e la scorro... (ricorsivamente)
+                    "push " + label, //per ciascuna etichetta...
+                    "lhp",  //..metto valore di $hp sullo stack: sarà il dispatchpointer da ritornare alla fine
+                    "sw", // carico la parola sullo stack
+                    "lhp", //  la memorizzo a indirizzo in $hp
+                    "push 1",  //pusho 1 per incrementare la posizione
+                    "add",  //sommo hp e 1 per aggiornare la posizione
+                    "shp" // setto il valore incrementato $hp
             );
         }
         return nlJoin(
-                "lhp",
-                createDispatchTable
+                "lhp", //alloca su heap la dispatch table della classe
+                generationDispatchTable // e lascia il dispatch pointer sullo stack
         );
     }
 
@@ -395,19 +395,19 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
         putCode(
                 nlJoin(
                         functionLabel + ":",
-                        "cfp", // set $fp to $sp value
-                        "lra", // load $ra value
-                        declarationListCode, // generate code for local declarations (they use the new $fp!!!)
-                        visit(node.expression), // generate code for function body expression
-                        "stm", // set $tm to popped value (function result)
-                        popDeclarationsList, // remove local declarations from stack
-                        "sra", // set $ra to popped value
-                        "pop", // remove Access Link from stack
-                        popParametersList, // remove parameters from stack
-                        "sfp", // set $fp to popped value (Control Link)
-                        "ltm", // load $tm value (function result)
-                        "lra", // load $ra value
-                        "js"  // jump to to popped address
+                        "cfp", // setto $fp a $sp
+                        "lra", // carico $ra sullo stack
+                        declarationListCode, // genero codice per le dichiarazioni locali (variabili) usando il nuovo $fp!
+                        visit(node.expression), // genero il codice per l'espressione
+                        "stm", // salvo il risultato in $tm
+                        popDeclarationsList, // rimuovo le dichiarazioni locali dallo stack
+                        "sra", // setto $ra a $tm (risultato)
+                        "pop", // rimuovo l'Access Link dallo stack
+                        popParametersList, // rimuovo i parametri dallo stack
+                        "sfp", // setto $fp al valore poppato che sarà Control Link
+                        "ltm", // carico $tm che è il risultato della funzione
+                        "lra", // carico $ra
+                        "js"  // salto a $ra che è il mio return address.
                 )
         );
         return null;
@@ -415,10 +415,10 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
     @Override
     public String visitNode(NewNode node) {
         if (print) printNode(node, node.id);
-        String putArgumentsOnStack = null;
+        String loadArgsOnStack = null;
         for(var argument : node.argumentsList) {
-            putArgumentsOnStack = nlJoin(
-                    putArgumentsOnStack,
+            loadArgsOnStack = nlJoin(
+                    loadArgsOnStack,
                     visit(argument)
             );
         }
@@ -426,29 +426,35 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
         for (var i = 0; i < node.argumentsList.size(); i++) {
             loadArgumentsOnHeap = nlJoin(
                     loadArgumentsOnHeap,
-                    "lhp",
-                    "sw",
-                    "lhp",
-                    "push 1",
-                    "add",
-                    "shp"
+                    "lhp", //carico sullo stack il valore di $hp (indirizzo object pointer da ritornare) e incremento $hp...
+                    "sw", // carico la parola sullo stack
+                    "lhp", // la memorizzo a indirizzo in $hp
+                    "push 1", // pusho 1 per incrementare la posizione
+                    "add", // sommo hp e 1 per aggiornare la posizione
+                    "shp"  // e setto il valore incrementato $hp.
             );
         }
         return nlJoin(
-                putArgumentsOnStack,
-                loadArgumentsOnHeap,
-                "push " + ExecuteVM.MEMSIZE,
-                "push " + node.newClassSTEntry.offset,
-                "add",
-                "lw", // get dispatch pointer
-                "lhp",
-                "sw",
+                loadArgsOnStack, //prendo il codice di loadArgsOnstack.
+                loadArgumentsOnHeap, //prendo il codice di loadArgsOnHeap.
+                "push " + ExecuteVM.MEMSIZE, //pusho lo spazio di memoria.
+                "push " + node.newClassSTEntry.offset, //pusho l'offset.
+                "add", //li sommo per ottenere il dispatch pointer.
+                "lw", // prendo il dispatch pointer
+                "lhp", // carica sullo stack il valore di $hp (indirizzo object pointer da ritornare) e incrementa $hp...
+                "sw", //... da qui è come quello visto subito sopra per il ClassNode.
                 "lhp",
                 "lhp",
                 "push 1",
                 "add",
                 "shp"
         );
+
+        /*
+		nota: anche se la classe ID non ha campi l’oggetto
+			allocato contiene comunque il dispatch pointer
+		 	== tra object pointer ottenuti da due new è sempre falso
+	 	*/
     }
 
     @Override
@@ -463,20 +469,20 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
             getActivationRecordCode = nlJoin(getActivationRecordCode, "lw");
         }
         return nlJoin(
-                "lfp", // load Control Link (pointer to frame of function "id" caller)
-                argumentsCode, // generate code for argument expressionxs in reversed order
-                "lfp", getActivationRecordCode, // retrieve address of frame containing "id" declaration
-                // by following the static chain (of Access Links)
-                "push " + node.classCallSTEntry.offset, // offset where to find the object pointer
-                "add",
-                "lw", // put the objectPointer
-                "stm", // set $tm to popped value (with the aim of duplicating top of stack)
-                "ltm", // load Access Link (pointer to frame of function "id" declaration)
-                "ltm", // duplicate top of stack
-                "lw",
-                "push " + node.classCallmethodSTEntry.offset, "add", // compute address of "id" declaration
-                "lw", // load address of "id" function
-                "js"  // jump to popped address (saving address of subsequent instruction in $ra)
+                "lfp", // carico il Control Link (puntatore alla funzione "id" chiamata)
+                argumentsCode, // genero il codice in maniera reverse per caricare gli argomenti sullo stack.
+                "lfp", getActivationRecordCode, //cerco l'indirizzo del frame che contiene la dichiarazione di "id"
+                // (nella classe che dichiara "id" o in una delle super classi)
+                "push " + node.classCallSTEntry.offset, // pusho l'offset di "id" all'interno del frame di dichiarazione di "id" (che è il frame che ho appena caricato)
+                "add", // sommo l'offset all'indirizzo del frame di dichiarazione di "id" per ottenere l'indirizzo di "id"
+                "lw",  // carico l'indirizzo di "id" (che è l'indirizzo della dispatch table)
+                "stm", // salvo il dispatch pointer in $tm
+                "ltm", // carico il dispatch pointer
+                "ltm", // duplico il dispatch pointer
+                "lw",  // carico l'indirizzo della dispatch table
+                "push " + node.classCallmethodSTEntry.offset, "add", // sommo l'offset di "id" all'indirizzo della dispatch table per ottenere l'indirizzo di "id"
+                "lw", // carico l'indirizzo di "id" (che è l'indirizzo della funzione "id")
+                "js"  // salto all'indirizzo della funzione "id"
         );
     }
 
