@@ -188,7 +188,8 @@ public class AST {
         }
     }
 
-
+    /*  In questo caso il greaterEqualNode, essendo un operatore infisso, prende due nodi:
+        essi saranno il fattore a sinistra e quello a destra */
     public static class GreaterEqualNode extends Node {
 
         final Node left;
@@ -380,7 +381,9 @@ public class AST {
     }
 
 
-    // Implementazione OOP.
+    /* ************ */
+    /* OOPS SECTION */
+    /* ************ */
 
     public static class ClassNode extends DecNode {
 
@@ -450,11 +453,12 @@ public class AST {
 
         final String objectId;
         final String methodId;
+        final List<Node> argumentsList;
 
         int nestingLevel;
         STentry classCallSTEntry;
         STentry classCallmethodSTEntry;
-        final List<Node> argumentsList;
+
 
         public ClassCallNode(String objectId, String methodId, List<Node> arguments) {
             this.objectId = objectId;
@@ -470,8 +474,8 @@ public class AST {
 
     public static class NewNode extends Node {
 
-        STentry newClassSTEntry;
         final String id;
+        STentry newClassSTEntry;
         List<Node> argumentsList;
 
         NewNode(String id, List<Node> arguments) {

@@ -299,6 +299,15 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
         );
     }
 
+    /* Nell'implementazione dell'&& utilizzo a mio favore la sua tabella di verità e noto che soltanto quando entrambi gli operatori che in questo caso
+	 sono entrambi "boolean" assumono il valore 1 (True) l'and drovrà andare a buon fine, come fare a implementarlo? Semplicemente quando gli operatori
+	visito il fattore sinistro e il fattore destro  e controllo che siano uguali a 1. Se entrambi lo sono allora l'and va buon fine
+	e come per gli operatori di "greaterequal" o "minusequal" o "equal" instrada la soluzione con dei label, cioè se sono entrambi 1 pusha 1 nello stack,
+	altrimenti 0. Inoltre, siccome disponiamo di uno stack a supporto, le operazioni assembly vengono valutate a 2 a 2. In uno stato q0 iniziale, il mio stack ha
+    poi pusha un 1, controlla con BEQ se 1 e right sono uguali e se lo sono pusha 1 poi controlla che "left" sia uguale al risultato della precedente valutazione
+    (che dovrà essere 1) e se lo è pusha 1. (Perciò && è true), in tutti gli altri casi pusha 0.
+	 */
+
     @Override
     public String visitNode(AndNode node) {
         if (print) printNode(node);
@@ -364,7 +373,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
                     generationDispatchTable, // creo sullo heap la Dispatch Table che ho costruito, e la scorro... (ricorsivamente)
                     "push " + label, //per ciascuna etichetta...
                     "lhp",  //..metto valore di $hp sullo stack: sarà il dispatchpointer da ritornare alla fine
-                    "sw", // carico la parola sullo stack
+                    "sw", // carico la word sullo stack
                     "lhp", //  la memorizzo a indirizzo in $hp
                     "push 1",  //pusho 1 per incrementare la posizione
                     "add",  //sommo hp e 1 per aggiornare la posizione

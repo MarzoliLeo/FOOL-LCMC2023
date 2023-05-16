@@ -27,11 +27,15 @@ import compiler.lib.*;
 public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
 
     private final List<Map<String, STentry>> symTable = new ArrayList<>();
-    Map<String, Map<String, STentry>> classTable = new HashMap<>();
+    /* Mappa ogni nome di classe nella propria Virtual Table:
+	serve per preservare le dichiarazioni interne ad una classe (campi e metodi) una volta che il visitor ha
+	concluso la dichiarazione di una classe. Le rende accessibili anche in seguito tramite il nome della classe.
+	Nota: Virtual Table è il nome che si da alla Symbol Table all'interno delle classi. */
+    Map<String, Map<String, STentry>> classTable = new HashMap<>(); //-- Slide 20/51.
     private int nestingLevel = 0; // current nesting level
     private int declarationOffset = -2; // counter for offset of local declarations at current nesting level
     int stErrors = 0;
-    Set<String> onClassVisitScope;
+    Set<String> onClassVisitScope; // variabile per il conteggio degli scope, durante la visita di una classe.
 
     SymbolTableASTVisitor() {
     }
@@ -304,12 +308,13 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
     /* ********* */
 
     public Void visitNode(ClassNode node) {
-        if (print) { printNode(node); }
+        if (print) printNode(node);
 
         var classType = new ClassTypeNode(new ArrayList<>(), new ArrayList<>());
         onClassVisitScope = new HashSet<String>(); //Ottimizzazione-1  pagina 47/51.
 
-        // Check if class is extending.
+        /* Inizio - Fase di controllo ereditarietà. */
+
         if (node.superID != null && classTable.containsKey(node.superID)) {
             STentry superClassEntry = symTable.get(0).get(node.superID);
             classType = new ClassTypeNode(
@@ -322,6 +327,9 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
         }
         STentry entry = new STentry(0, classType, declarationOffset--);
         node.classType = classType;
+        /* Fine - Fase di controllo ereditarietà. */
+
+        // Check if the class is already declared.
         Map<String, STentry> globalScopeTable = symTable.get(0);
         if (globalScopeTable.put(node.id, entry) != null) {
             System.out.println("Class id " + node.id + " at line " + node.getLine() + " already declared");
@@ -329,9 +337,9 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
         }
 
         // Add the scope of the class to the symbol table.
-        // Table should be added for both symbol table and class table.
         nestingLevel++;
         Map<String, STentry> virtualTable = new HashMap<>();
+        // Add the methods of the superclass (if extends) to the virtual table.
         var superClassVirtualTable = classTable.get(node.superID);
         if (node.superID != null) {
             virtualTable.putAll(superClassVirtualTable);
@@ -339,7 +347,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
         classTable.put(node.id, virtualTable);
         symTable.add(virtualTable);
 
-        // Setting the offset for the fields of the class.
+        // Setting the offset for the fields of the class. -- Slide 26/51.
         int fieldOffset = -1;
         if (node.superID != null) {
             fieldOffset = -((ClassTypeNode) symTable.get(0).get(node.superID).type).allFields.size()-1;
@@ -395,13 +403,14 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
     @Override
     public Void visitNode(MethodNode node) {
         if (print) printNode(node);
+
         Map<String, STentry> currentScopeTable = symTable.get(nestingLevel);
         List<TypeNode> paramTypes = new ArrayList<>();
         for (ParNode parameter : node.parametersList) {
             paramTypes.add(parameter.getType());
         }
 
-        // Inserting the method in the virtual table.
+        // Inserting the method in the Symbol Table. -- Slide 24/51.
         STentry overriddenMethodEntry = currentScopeTable.get(node.id);
         final TypeNode methodType = new MethodTypeNode(new ArrowTypeNode(paramTypes, node.retType));
         STentry entry = null;
@@ -452,6 +461,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
     @Override
     public Void visitNode(NewNode node) {
         if (print) printNode(node);
+        // Check if the class id was already declared.
         if (!classTable.containsKey(node.id)) {
             System.out.println("Class id " + node.id + " was not declared");
             stErrors++;

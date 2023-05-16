@@ -76,9 +76,8 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
     }
 
     public Node visitCldec(CldecContext c) {
-        if (print) {
-            printVarAndProdName(c);
-        }
+        if (print) printVarAndProdName(c) ;
+
         String classID = c.ID(0).getText();
         String superID = null;
         List<FieldNode> fields = new ArrayList<>();
