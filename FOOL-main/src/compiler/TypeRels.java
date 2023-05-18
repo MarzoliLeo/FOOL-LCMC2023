@@ -9,15 +9,15 @@ import java.util.stream.IntStream;
 
 public class TypeRels {
 	public static Map<String, String> superType = new HashMap<>();
-	// valuta se il tipo "a" e' <= al tipo "b", dove "a" e "b" sono tipi di base: IntTypeNode o BoolTypeNode
+	// valuta se il tipo "a" e' <= al tipo "b", dove "a" e "b" sono tipi di base.
 	public static boolean isSubtype(TypeNode a, TypeNode b) {
 		if (a instanceof RefTypeNode && b instanceof RefTypeNode) {
 			String directSuperType = ((RefTypeNode) a).id;
-			while (directSuperType != null && !directSuperType.equals(((RefTypeNode) b).id)) {
+			while (directSuperType != null && !directSuperType.equals(((RefTypeNode) b).id))
 				directSuperType = superType.get(directSuperType);
-			}
 			return ((RefTypeNode) a).id.equals(((RefTypeNode) b).id) || directSuperType != null;
 		}
+		//Note the function type is: T1,T2,T3,T4... => T (T1,T2,T3,T4... are the parameters, T is the return type)
 		if (a instanceof ArrowTypeNode && b instanceof ArrowTypeNode) {
 			return isSubtype(((ArrowTypeNode) a).returnType, ((ArrowTypeNode) b).returnType)
 							&& IntStream.range(0, ((ArrowTypeNode) a).parametersList.size())

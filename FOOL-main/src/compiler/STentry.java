@@ -12,12 +12,12 @@ import compiler.lib.*;
  */
 public class STentry implements Visitable {
 
-	final int nl;
+	final int nestinglevel;
 	final TypeNode type;
 	final int offset;
 
-	public STentry(int nl, TypeNode type, int offset) {
-		this.nl = nl;
+	public STentry(int nestinglevel, TypeNode type, int offset) {
+		this.nestinglevel = nestinglevel;
 		this.type = type;
 		this.offset = offset;
 	}

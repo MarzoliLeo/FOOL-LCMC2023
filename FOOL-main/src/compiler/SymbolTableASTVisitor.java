@@ -466,6 +466,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
             System.out.println("Class id " + node.id + " was not declared");
             stErrors++;
         }
+        // Istanziate the class.
         node.newClassSTEntry = symTable.get(0).get(node.id);
         for (var argument : node.argumentsList) {
             visit(argument);
@@ -476,6 +477,8 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
     @Override
     public Void visitNode(RefTypeNode node) {
         if (print) printNode(node, node.id);
+
+        // Check if the class id was already declared.
         if (!classTable.containsKey(node.id)) {
             System.out.println("Class with id " + node.id + " on line " + node.getLine() + " was not declared");
             stErrors++;
@@ -487,7 +490,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void, VoidException> {
     public Void visitNode(ClassCallNode node) {
         if (print) printNode(node);
 
-        // Check if the object id was declared.
+        // Check if the object id was declared into the symbol table, with the use of stLookup.
         STentry entry = stLookup(node.objectId);
         if (entry == null) {
             System.out.println("Object id " + node.objectId + " at line " + node.getLine() + " not declared");

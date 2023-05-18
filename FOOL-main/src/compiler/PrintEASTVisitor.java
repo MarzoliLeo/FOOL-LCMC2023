@@ -10,6 +10,16 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void, VoidException> {
         super(false, true);
     }
 
+
+    @Override
+    public Void visitSTentry(STentry entry) {
+        printSTentry("nestlev " + entry.nestinglevel);
+        printSTentry("type");
+        visit(entry.type);
+        printSTentry("offset " + entry.offset);
+        return null;
+    }
+
     @Override
     public Void visitNode(ProgLetInNode node) {
         printNode(node);
@@ -24,52 +34,6 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void, VoidException> {
     public Void visitNode(ProgNode node) {
         printNode(node);
         visit(node.expression);
-        return null;
-    }
-
-    @Override
-    public Void visitNode(ClassNode node) {
-        printNode(node, node.id);
-        for (var field : node.fields) {
-            visit(field);
-        }
-        for (var method : node.methods) {
-            visit(method);
-        }
-        return null;
-    }
-
-    @Override
-    public Void visitNode(FieldNode node) {
-        printNode(node, node.id);
-        visit(node.getType());
-        return null;
-    }
-
-    @Override
-    public Void visitNode(MethodNode node) {
-        printNode(node, node.id);
-        visit(node.retType);
-        for (ParNode parameter : node.parametersList) {
-            visit(parameter);
-        }
-        for (DecNode declaration : node.declarationsList) {
-            visit(declaration);
-        }
-        visit(node.expression);
-        return null;
-    }
-
-    @Override
-    public Void visitNode(NewNode node) {
-        printNode(node, node.id);
-        visit(node.newClassSTEntry);
-        return null;
-    }
-
-    @Override
-    public Void visitNode(RefTypeNode node) {
-        printNode(node, node.id);
         return null;
     }
 
@@ -127,54 +91,7 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void, VoidException> {
     }
 
     @Override
-    public Void visitNode(NotNode node) {
-        printNode(node);
-        visit(node.expression);
-        return null;
-    }
-
-    @Override
-    public Void visitNode(LessEqualNode node) {
-        printNode(node);
-        visit(node.left);
-        visit(node.right);
-        return null;
-    }
-
-    @Override
-    public Void visitNode(GreaterEqualNode node) {
-        printNode(node);
-        visit(node.left);
-        visit(node.right);
-        return null;
-    }
-
-    @Override
-    public Void visitNode(OrNode node) {
-        printNode(node);
-        visit(node.left);
-        visit(node.right);
-        return null;
-    }
-
-    @Override
-    public Void visitNode(AndNode node) {
-        printNode(node);
-        visit(node.left);
-        visit(node.right);
-        return null;
-    }
-
-    @Override
     public Void visitNode(TimesNode node) {
-        printNode(node);
-        visit(node.left);
-        visit(node.right);
-        return null;
-    }
-
-    @Override
-    public Void visitNode(DivNode node) {
         printNode(node);
         visit(node.left);
         visit(node.right);
@@ -190,28 +107,9 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void, VoidException> {
     }
 
     @Override
-    public Void visitNode(MinusNode node) {
-        printNode(node);
-        visit(node.left);
-        visit(node.right);
-        return null;
-    }
-
-    @Override
     public Void visitNode(CallNode node) {
         printNode(node, node.id + " at nestinglevel " + node.nestingLevel);
         visit(node.callNodeSTEntry);
-        for (Node argument : node.argumentsList) {
-            visit(argument);
-        }
-        return null;
-    }
-
-    @Override
-    public Void visitNode(ClassCallNode node) {
-        printNode(node, node.objectId + "." +  node.methodId + " at nestingLevel " + node.nestingLevel);
-        visit(node.classCallmethodSTEntry);
-        visit(node.classCallmethodSTEntry);
         for (Node argument : node.argumentsList) {
             visit(argument);
         }
@@ -259,6 +157,121 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void, VoidException> {
         return null;
     }
 
+
+    /* ***************** */
+    /* Operation Section */
+    /* ***************** */
+
+    @Override
+    public Void visitNode(MinusNode node) {
+        printNode(node);
+        visit(node.left);
+        visit(node.right);
+        return null;
+    }
+
+    @Override
+    public Void visitNode(DivNode node) {
+        printNode(node);
+        visit(node.left);
+        visit(node.right);
+        return null;
+    }
+
+    @Override
+    public Void visitNode(LessEqualNode node) {
+        printNode(node);
+        visit(node.left);
+        visit(node.right);
+        return null;
+    }
+
+    @Override
+    public Void visitNode(GreaterEqualNode node) {
+        printNode(node);
+        visit(node.left);
+        visit(node.right);
+        return null;
+    }
+
+    @Override
+    public Void visitNode(OrNode node) {
+        printNode(node);
+        visit(node.left);
+        visit(node.right);
+        return null;
+    }
+
+    @Override
+    public Void visitNode(AndNode node) {
+        printNode(node);
+        visit(node.left);
+        visit(node.right);
+        return null;
+    }
+
+    @Override
+    public Void visitNode(NotNode node) {
+        printNode(node);
+        visit(node.expression);
+        return null;
+    }
+
+    /* ***************** */
+    /*    OOP Section    */
+    /* ***************** */
+
+    @Override
+    public Void visitNode(ClassNode node) {
+        printNode(node, node.id);
+        for (var field : node.fields) {
+            visit(field);
+        }
+        for (var method : node.methods) {
+            visit(method);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitNode(FieldNode node) {
+        printNode(node, node.id);
+        visit(node.getType());
+        return null;
+    }
+
+    @Override
+    public Void visitNode(MethodNode node) {
+        printNode(node, node.id);
+        visit(node.retType);
+        for (ParNode parameter : node.parametersList) {
+            visit(parameter);
+        }
+        for (DecNode declaration : node.declarationsList) {
+            visit(declaration);
+        }
+        visit(node.expression);
+        return null;
+    }
+
+    @Override
+    public Void visitNode(NewNode node) {
+        printNode(node, node.id);
+        visit(node.newClassSTEntry);
+        return null;
+    }
+
+    @Override
+    public Void visitNode(ClassCallNode node) {
+        printNode(node, node.objectId + "." +  node.methodId + " at nestingLevel " + node.nestingLevel);
+        visit(node.classCallmethodSTEntry);
+        visit(node.classCallmethodSTEntry);
+        for (Node argument : node.argumentsList) {
+            visit(argument);
+        }
+        return null;
+    }
+
     @Override
     public Void visitNode(ClassTypeNode node) {
         printNode(node);
@@ -272,23 +285,18 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void, VoidException> {
     }
 
     @Override
+    public Void visitNode(RefTypeNode node) {
+        printNode(node, node.id);
+        return null;
+    }
+    @Override
     public Void visitNode(MethodTypeNode node) {
         visit(node.functionalType);
         return null;
     }
-
     @Override
     public Void visitNode(EmptyNode node) {
         printNode(node);
-        return null;
-    }
-
-    @Override
-    public Void visitSTentry(STentry entry) {
-        printSTentry("nestlev " + entry.nl);
-        printSTentry("type");
-        visit(entry.type);
-        printSTentry("offset " + entry.offset);
         return null;
     }
 }
